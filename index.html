@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Number Tracker - Database Search</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="background-elements">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+    </div>
+
+    <div class="app-layout">
+        <!-- Main Content -->
+        <main class="glass-container">
+            <header>
+                <h1>Number<span class="gradient-text">Search</span></h1>
+                <p>Pilih negara dan telusuri database nomor berdasarkan angka berakhiran.</p>
+            </header>
+
+            <section class="db-selector-section">
+                <div class="db-tabs" id="dbTabs">
+                    <!-- Database tabs will be injected here -->
+                </div>
+                <div class="upload-wrapper">
+                    <input type="file" id="fileUpload" accept=".txt" class="hidden-input">
+                    <button id="uploadBtn" class="upload-btn" title="Upload file .txt baru">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        Tambah File
+                    </button>
+                </div>
+            </section>
+
+            <section class="results-section">
+                <div id="singleNumberContainer" class="single-number-container">
+                    <!-- Single number card will be injected here -->
+                </div>
+                
+                <div id="loadingState" class="loading-state hidden">
+                    <div class="spinner"></div>
+                    <p>Mencari nomor baru...</p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
