@@ -2,7 +2,6 @@ node_modules/
 .env
 .DS_Store
 npm-debug.log*
-data/*.txt
 # Keep the data folder but ignore large text files if you want
 # Actually, the user might want the data uploaded since they were using it.
 # I'll keep the data folder files for now unless they are huge.
