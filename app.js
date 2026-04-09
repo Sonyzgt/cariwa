@@ -1,12 +1,14 @@
 // Elements
-const dbTabsContainer = document.getElementById('dbTabs');
+const regionSelector = document.getElementById('regionSelector');
 const singleNumberContainer = document.getElementById('singleNumberContainer');
 const loadingState = document.getElementById('loadingState');
 const statsDisplay = document.querySelector('.stats'); // Added in placeholder if needed, let's keep it for db info
 
 // State
 let currentDb = '';
+let currentRegion = ''; // Selected region code
 let availableDbs = [];
+let availableRegions = [];
 let currentNumberData = null;
 
 // Initialize
@@ -17,7 +19,7 @@ async function init() {
         
         if (availableDbs.length > 0) {
             currentDb = availableDbs[0];
-            renderTabs();
+            await fetchRegions(); // Load regions for this database
             fetchRandomNumber();
         } else {
             singleNumberContainer.innerHTML = '<p class="error">Tidak ada database ditemukan.</p>';
@@ -28,25 +30,58 @@ async function init() {
     }
 }
 
-function formatDbName(name) {
-    return name.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+async function fetchRegions() {
+    try {
+        const res = await fetch(`/api/regions?db=${encodeURIComponent(currentDb)}`);
+        availableRegions = await res.json();
+        
+        if (availableRegions.length > 1) {
+            renderRegions();
+            regionSelector.classList.remove('hidden');
+        } else {
+            regionSelector.classList.add('hidden');
+            currentRegion = availableRegions.length > 0 ? availableRegions[0].code : '';
+        }
+    } catch (err) {
+        console.error('Failed to fetch regions:', err);
+    }
 }
 
-function renderTabs() {
-    dbTabsContainer.innerHTML = '';
-    availableDbs.forEach(db => {
+function renderRegions() {
+    regionSelector.innerHTML = '';
+    
+    // Optional: Add "All" or "Global" or just use the detected countries
+    availableRegions.forEach(region => {
         const btn = document.createElement('button');
-        btn.className = `db-tab ${db === currentDb ? 'active' : ''}`;
-        btn.textContent = formatDbName(db);
+        btn.className = `region-pill ${currentRegion === region.code ? 'active' : ''}`;
+        btn.innerHTML = `
+            <span class="region-flag">${region.flag}</span>
+            <span class="region-name">${region.name}</span>
+            <span class="region-count">${region.count}</span>
+        `;
+        
         btn.onclick = () => {
-            if (currentDb === db) return;
-            currentDb = db;
-            document.querySelectorAll('.db-tab').forEach(b => b.classList.remove('active'));
+            if (currentRegion === region.code) return;
+            currentRegion = region.code;
+            document.querySelectorAll('.region-pill').forEach(p => p.classList.remove('active'));
             btn.classList.add('active');
+            btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
             fetchRandomNumber();
         };
-        dbTabsContainer.appendChild(btn);
+        
+        regionSelector.appendChild(btn);
     });
+    
+    // Set default if not set
+    if (!currentRegion && availableRegions.length > 0) {
+        currentRegion = availableRegions[0].code;
+        const firstPill = regionSelector.querySelector('.region-pill');
+        if (firstPill) {
+            firstPill.classList.add('active');
+            // Small timeout to ensure rendering is complete
+            setTimeout(() => firstPill.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' }), 100);
+        }
+    }
 }
 
 async function fetchRandomNumber() {
@@ -54,7 +89,12 @@ async function fetchRandomNumber() {
     loadingState.classList.remove('hidden');
     
     try {
-        const res = await fetch(`/api/random?db=${encodeURIComponent(currentDb)}`);
+        let url = `/api/random?db=${encodeURIComponent(currentDb)}`;
+        if (currentRegion) {
+            url += `&region=${encodeURIComponent(currentRegion)}`;
+        }
+        
+        const res = await fetch(url);
         const result = await res.json();
         
         if (result.success) {
@@ -76,11 +116,7 @@ async function fetchRandomNumber() {
 function renderNumberCard(data) {
     singleNumberContainer.innerHTML = `
         <div class="big-number-card">
-            <div class="big-flag-container">
-                <div class="big-flag">${data.flag}</div>
-            </div>
             <div class="big-info">
-                <div class="big-country">${data.countryName}</div>
                 <div class="big-number">${data.original}</div>
             </div>
             <div class="card-big-actions">
@@ -125,20 +161,14 @@ async function changeNumber(btn) {
             fetchRandomNumber();
         } else {
             alert('Gagal menghapus nomor: ' + (result.error || 'Unknown error'));
-            changeBtn.disabled = false;
-            changeBtn.innerHTML = `
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-9 9m9-9a9 9 0 0 0-9-9m9 9H3m9 9a9 9 0 0 1-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9"></path></svg>
-                Change Number
-            `;
+            btn.disabled = false;
+            btn.innerHTML = originalHTML;
         }
     } catch (err) {
         console.error(err);
         alert('Gagal menghubungi server.');
-        changeBtn.disabled = false;
-        changeBtn.innerHTML = `
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-9 9m9-9a9 9 0 0 0-9-9m9 9H3m9 9a9 9 0 0 1-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9"></path></svg>
-            Change Number
-        `;
+        btn.disabled = false;
+        btn.innerHTML = originalHTML;
     }
 }
 

@@ -86,16 +86,38 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(__dirname));
 
-// Store databases: Map<filename, array_of_numbers>
+// Store databases: Map<filename, Map<regionCode, array_of_numbers>>
 const databases = new Map();
+// Store region metadata (name, flag) for quick lookup
+const regionMetadataCache = new Map();
 
-// Helper to load a single file into memory
+// Helper to load a single file into memory and group by region
 function loadDatabaseFile(filePath, dbName) {
     try {
         const fileContent = fs.readFileSync(filePath, 'utf-8');
         const lines = fileContent.split('\n').map(line => line.trim()).filter(Boolean);
-        databases.set(dbName, lines);
-        console.log(`Loaded database "${dbName}" with ${lines.length} numbers.`);
+        
+        const regionalGroups = new Map();
+        
+        for (const number of lines) {
+            const details = getPhoneDetails(number);
+            const rCode = details.countryCode || 'Unknown';
+            
+            if (!regionalGroups.has(rCode)) {
+                regionalGroups.set(rCode, []);
+                // Save metadata if not already cached
+                if (rCode !== 'Unknown' && !regionMetadataCache.has(rCode)) {
+                    regionMetadataCache.set(rCode, {
+                        name: details.countryName,
+                        flag: details.flag
+                    });
+                }
+            }
+            regionalGroups.get(rCode).push(number);
+        }
+        
+        databases.set(dbName, regionalGroups);
+        console.log(`Loaded database "${dbName}" with numbers from ${regionalGroups.size} regions.`);
     } catch (e) {
         console.error(`Error loading database file ${dbName}:`, e);
     }
@@ -129,6 +151,31 @@ app.get('/api/databases', (req, res) => {
     res.json(dbs);
 });
 
+// API endpoint to get unique regions for a database
+app.get('/api/regions', (req, res) => {
+    const dbName = req.query.db;
+    if (!dbName || !databases.has(dbName)) {
+        return res.status(404).json({ error: 'Database not found' });
+    }
+    
+    const regionalGroups = databases.get(dbName);
+    const regions = [];
+    
+    for (const [code, numbers] of regionalGroups.entries()) {
+        const meta = regionMetadataCache.get(code) || { name: 'Unknown', flag: '🌍' };
+        regions.push({
+            code,
+            name: meta.name,
+            flag: meta.flag,
+            count: numbers.length
+        });
+    }
+    
+    // Sort by count descending
+    regions.sort((a, b) => b.count - a.count);
+    res.json(regions);
+});
+
 // API Endpoint to upload a new database
 app.post('/api/upload', upload.single('dbFile'), (req, res) => {
     if (!req.file) {
@@ -144,18 +191,30 @@ app.post('/api/upload', upload.single('dbFile'), (req, res) => {
 // API endpoint to get a random number from a database
 app.get('/api/random', (req, res) => {
     const dbName = req.query.db;
+    const regionCode = req.query.region;
 
     if (!dbName || !databases.has(dbName)) {
         return res.status(404).json({ error: 'Database not found' });
     }
 
-    const targetData = databases.get(dbName);
-    if (targetData.length === 0) {
+    const regionalGroups = databases.get(dbName);
+    let targetNumbers = [];
+
+    if (regionCode && regionalGroups.has(regionCode)) {
+        targetNumbers = regionalGroups.get(regionCode);
+    } else {
+        // Fallback to all numbers if no region specified or not found
+        for (const numbers of regionalGroups.values()) {
+            targetNumbers = targetNumbers.concat(numbers);
+        }
+    }
+
+    if (targetNumbers.length === 0) {
         return res.json({ success: false, error: 'No numbers available' });
     }
 
-    const randomIndex = Math.floor(Math.random() * targetData.length);
-    const randomNumber = targetData[randomIndex];
+    const randomIndex = Math.floor(Math.random() * targetNumbers.length);
+    const randomNumber = targetNumbers[randomIndex];
 
     res.json({
         success: true,
@@ -171,7 +230,15 @@ app.post('/api/delete', (req, res) => {
         return res.status(404).json({ error: 'Database not found' });
     }
 
-    const numbers = databases.get(dbName);
+    const regionalGroups = databases.get(dbName);
+    const details = getPhoneDetails(number);
+    const rCode = details.countryCode || 'Unknown';
+
+    if (!regionalGroups.has(rCode)) {
+        return res.status(404).json({ error: 'Region not found' });
+    }
+
+    const numbers = regionalGroups.get(rCode);
     const index = numbers.indexOf(number);
 
     if (index === -1) {
@@ -180,14 +247,23 @@ app.post('/api/delete', (req, res) => {
 
     // Remove from memory
     numbers.splice(index, 1);
-    databases.set(dbName, numbers);
+    if (numbers.length === 0) {
+        regionalGroups.delete(rCode);
+    } else {
+        regionalGroups.set(rCode, numbers);
+    }
 
-    // Save to file
+    // Save to file (requires merging all groups back)
     const filePath = path.join(__dirname, 'data', `${dbName}.txt`);
     try {
-        fs.writeFileSync(filePath, numbers.join('\n'), 'utf-8');
-        console.log(`Deleted number ${number} from ${dbName}. Remaining: ${numbers.length}`);
-        res.json({ success: true, remaining: numbers.length });
+        const allNumbers = [];
+        for (const group of regionalGroups.values()) {
+            allNumbers.push(...group);
+        }
+        
+        fs.writeFileSync(filePath, allNumbers.join('\n'), 'utf-8');
+        console.log(`Deleted number ${number} from ${dbName} (${rCode}). Remaining: ${allNumbers.length}`);
+        res.json({ success: true, remaining: allNumbers.length });
     } catch (error) {
         console.error(`Failed to save database file ${dbName} after deletion:`, error);
         res.status(500).json({ error: 'Failed to update database file' });
