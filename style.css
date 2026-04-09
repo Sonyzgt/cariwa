@@ -327,6 +327,18 @@ header p {
     color: var(--accent-2);
 }
 
+.btn-telegram {
+    background: linear-gradient(135deg, #0088cc, #00aff0);
+    color: white;
+    box-shadow: 0 10px 25px rgba(0, 136, 204, 0.3);
+}
+
+.btn-telegram:hover {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 15px 35px rgba(0, 136, 204, 0.5);
+    color: #fff;
+}
+
 .btn-copy:hover {
     background: rgba(59, 130, 246, 0.2);
     box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);

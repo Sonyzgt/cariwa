@@ -124,6 +124,10 @@ function renderNumberCard(data) {
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                     COPY NUMBER
                 </button>
+                <button class="big-action-btn btn-telegram" onclick="sendToTelegram('${data.original}')">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L2 10.5L9 13L12 21L22 2Z" fill="white" /><path d="M9 13L22 2L12 21" stroke="white" stroke-width="2" /></svg>
+                    SEND TO TELEGRAM
+                </button>
                 <button class="big-action-btn btn-change" onclick="changeNumber(this)">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-9 9m9-9a9 9 0 0 0-9-9m9 9H3m9 9a9 9 0 0 1-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9"></path></svg>
                     CHANGE NUMBER
@@ -185,9 +189,16 @@ async function copyToClipboard(text, btn) {
     }
 }
 
+async function sendToTelegram(number) {
+    const prefixedText = number.startsWith('+') ? number : '+' + number;
+    const url = `https://t.me/Bulk_SmsBot?text=${encodeURIComponent(prefixedText)}`;
+    window.open(url, '_blank');
+}
+
 // Global exposure for onclick handlers
 window.changeNumber = changeNumber;
 window.copyToClipboard = copyToClipboard;
+window.sendToTelegram = sendToTelegram;
 
 // Start
 init();
