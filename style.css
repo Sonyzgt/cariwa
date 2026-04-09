@@ -320,16 +320,6 @@ header p {
     position: relative;
 }
 
-.btn-restore {
-    background: linear-gradient(135deg, #7c3aed, #2563eb);
-    color: white;
-    box-shadow: 0 10px 25px rgba(37, 99, 235, 0.3);
-}
-
-.btn-restore:hover {
-    transform: translateY(-4px) scale(1.02);
-    box-shadow: 0 15px 35px rgba(37, 99, 235, 0.5);
-}
 
 .btn-copy {
     background: rgba(59, 130, 246, 0.1);
@@ -350,9 +340,6 @@ header p {
     border-color: transparent;
 }
 
-.btn-restore:active {
-    transform: translateY(0) scale(0.98);
-}
 
 .btn-change {
     background: rgba(255, 255, 255, 0.05);
@@ -366,9 +353,6 @@ header p {
     border-color: rgba(255, 255, 255, 0.3);
 }
 
-.btn-restore.loading svg {
-    animation: spin 1s linear infinite;
-}
 
 @keyframes spin {
     from { transform: rotate(0deg); }

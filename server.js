@@ -4,25 +4,11 @@ const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
 const { parsePhoneNumberFromString } = require('libphonenumber-js');
-const nodemailer = require('nodemailer');
 require('dotenv').config();
 
 const app = express();
 const PORT = 3003;
 
-// Setup Nodemailer Transporter
-const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false, // TLS
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-    },
-    tls: {
-        rejectUnauthorized: false
-    }
-});
 
 // Setup Storage for multer
 const storage = multer.diskStorage({
@@ -308,29 +294,6 @@ app.get('/api/search', (req, res) => {
     });
 });
 
-// API endpoint to send restoration email
-app.get('/api/send-email', async (req, res) => {
-    const numberString = req.query.number;
-    if (!numberString) {
-        return res.status(400).json({ error: 'Number is required' });
-    }
-
-    const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to: 'support@support.whatsapp.com',
-        subject: `Question about WhatsApp: Restore my account ${numberString}`,
-        text: `Subject: Deactivation of my account\n\nTo WhatsApp Support,\n\nPlease reactivate my WhatsApp account with the phone number ${numberString}.\n\nMy mobile phone was recently stolen/lost and I am very concerned about the security of my personal data. I have already contacted my service provider to block the SIM card, but I now need to regain access to my account and ensure it is secured.\n\nThis account contains many important business and personal communications that I need for my daily activities. Please assist me in the restoration process as soon as possible.\n\nThank you for your help.\n\nRegards,\nWhatsApp User`
-    };
-
-    try {
-        await transporter.sendMail(mailOptions);
-        console.log(`Email sent successfully for ${numberString}`);
-        res.json({ success: true });
-    } catch (error) {
-        console.error(`Failed to send email for ${numberString}:`, error);
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
 
 app.listen(PORT, () => {
     console.log(`Server is running at http://localhost:${PORT}`);
