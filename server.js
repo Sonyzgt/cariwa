@@ -174,6 +174,29 @@ app.post('/api/upload', upload.single('dbFile'), (req, res) => {
     res.json({ success: true, dbName: dbName });
 });
 
+// API Endpoint to delete a database file entirely
+app.post('/api/delete-db', (req, res) => {
+    const { dbName } = req.body;
+    
+    if (!dbName || !databases.has(dbName)) {
+        return res.status(404).json({ error: 'Database not found' });
+    }
+
+    const filePath = path.join(__dirname, 'data', `${dbName}.txt`);
+    
+    try {
+        if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+        }
+        databases.delete(dbName);
+        console.log(`Deleted database file: ${dbName}.txt`);
+        res.json({ success: true });
+    } catch (error) {
+        console.error(`Failed to delete database file ${dbName}:`, error);
+        res.status(500).json({ error: 'Failed to delete database file' });
+    }
+});
+
 // API endpoint to get a random number from a database
 app.get('/api/random', (req, res) => {
     const dbName = req.query.db;
