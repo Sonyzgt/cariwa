@@ -227,7 +227,8 @@ app.get('/api/random', (req, res) => {
 
     res.json({
         success: true,
-        data: getPhoneDetails(randomNumber)
+        data: getPhoneDetails(randomNumber),
+        remaining: targetNumbers.length
     });
 });
 

@@ -50,7 +50,28 @@ async function fetchRegions() {
 function renderRegions() {
     regionSelector.innerHTML = '';
     
-    // Optional: Add "All" or "Global" or just use the detected countries
+    // Calculate total
+    let totalCount = 0;
+    availableRegions.forEach(region => totalCount += region.count);
+
+    // Add "Semua" (All) pill
+    const allBtn = document.createElement('button');
+    allBtn.className = `region-pill ${currentRegion === '' ? 'active' : ''}`;
+    allBtn.innerHTML = `
+        <span class="region-flag">🌍</span>
+        <span class="region-name">Semua</span>
+        <span class="region-count">${totalCount}</span>
+    `;
+    allBtn.onclick = () => {
+        if (currentRegion === '') return;
+        currentRegion = '';
+        document.querySelectorAll('.region-pill').forEach(p => p.classList.remove('active'));
+        allBtn.classList.add('active');
+        allBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        fetchRandomNumber();
+    };
+    regionSelector.appendChild(allBtn);
+
     availableRegions.forEach(region => {
         const btn = document.createElement('button');
         btn.className = `region-pill ${currentRegion === region.code ? 'active' : ''}`;
@@ -72,13 +93,14 @@ function renderRegions() {
         regionSelector.appendChild(btn);
     });
     
-    // Set default if not set
-    if (!currentRegion && availableRegions.length > 0) {
-        currentRegion = availableRegions[0].code;
+    // If no current region is set, default to "Semua" ('')
+    if (currentRegion === undefined) {
+        currentRegion = '';
+        allBtn.classList.add('active');
+    } else if (currentRegion === '') {
         const firstPill = regionSelector.querySelector('.region-pill');
         if (firstPill) {
             firstPill.classList.add('active');
-            // Small timeout to ensure rendering is complete
             setTimeout(() => firstPill.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' }), 100);
         }
     }
@@ -99,7 +121,7 @@ async function fetchRandomNumber() {
         
         if (result.success) {
             currentNumberData = result.data;
-            renderNumberCard(result.data);
+            renderNumberCard(result.data, result.remaining);
         } else {
             singleNumberContainer.innerHTML = `<div class="error-msg">${result.error || 'Gagal mengambil nomor.'}</div>`;
             singleNumberContainer.classList.remove('hidden');
@@ -113,9 +135,10 @@ async function fetchRandomNumber() {
     }
 }
 
-function renderNumberCard(data) {
+function renderNumberCard(data, remaining) {
     singleNumberContainer.innerHTML = `
         <div class="big-number-card">
+            <div class="remaining-count" style="text-align:center; font-size:1.1rem; color:var(--text-muted); margin-bottom:10px; font-weight:600; letter-spacing: 1px;">SISA NOMOR: ${remaining}</div>
             <div class="big-info">
                 <div class="big-number">${data.original}</div>
             </div>
@@ -129,7 +152,6 @@ function renderNumberCard(data) {
                     SEND TO TELEGRAM
                 </button>
                 <button class="big-action-btn btn-change" onclick="changeNumber(this)">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-9 9m9-9a9 9 0 0 0-9-9m9 9H3m9 9a9 9 0 0 1-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9"></path></svg>
                     CHANGE NUMBER
                 </button>
             </div>
