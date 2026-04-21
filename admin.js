@@ -3,6 +3,11 @@ const dbFileInput = document.getElementById('dbFileInput');
 const uploadBtn = document.getElementById('uploadBtn');
 const uploadStatus = document.getElementById('uploadStatus');
 
+const pasteBtn = document.getElementById('pasteBtn');
+const pasteDbName = document.getElementById('pasteDbName');
+const pasteDbContent = document.getElementById('pasteDbContent');
+const pasteStatus = document.getElementById('pasteStatus');
+
 async function fetchDatabases() {
     try {
         const response = await fetch('/api/databases');
@@ -77,6 +82,48 @@ dbFileInput.addEventListener('change', async (e) => {
         uploadBtn.innerHTML = originalBtnHTML;
         uploadBtn.disabled = false;
         dbFileInput.value = ''; // Reset input
+    }
+});
+
+pasteBtn.addEventListener('click', async () => {
+    const name = pasteDbName.value.trim();
+    const content = pasteDbContent.value.trim();
+
+    if (!name || !content) {
+        pasteStatus.innerText = 'Nama dan konten tidak boleh kosong!';
+        pasteStatus.style.color = 'var(--red)';
+        return;
+    }
+
+    const originalBtnHTML = pasteBtn.innerHTML;
+    pasteBtn.innerHTML = '<span class="spinner-small" style="margin-right: 10px;"></span> SAVING...';
+    pasteBtn.disabled = true;
+    pasteStatus.innerText = '';
+
+    try {
+        const response = await fetch('/api/paste', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, content })
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+            pasteStatus.innerText = 'Database berhasil disimpan!';
+            pasteStatus.style.color = 'var(--green)';
+            pasteDbName.value = '';
+            pasteDbContent.value = '';
+            fetchDatabases(); // Refresh list
+        } else {
+            throw new Error(result.error || 'Save failed');
+        }
+    } catch (err) {
+        console.error(err);
+        pasteStatus.innerText = 'Gagal menyimpan database.';
+        pasteStatus.style.color = 'var(--red)';
+    } finally {
+        pasteBtn.innerHTML = originalBtnHTML;
+        pasteBtn.disabled = false;
     }
 });
 

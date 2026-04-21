@@ -31,6 +31,19 @@
                     <div id="uploadStatus" class="stats"></div>
                 </div>
 
+                <!-- Paste Form -->
+                <div class="paste-container">
+                    <div class="input-group">
+                        <input type="text" id="pasteDbName" placeholder="Database Name (e.g., customers)" class="modern-input">
+                    </div>
+                    <textarea id="pasteDbContent" placeholder="Paste numbers here, one per line..." class="modern-textarea"></textarea>
+                    <button id="pasteBtn" class="upload-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                        SAVE DATABASE
+                    </button>
+                    <div id="pasteStatus" class="stats"></div>
+                </div>
+
                 <!-- Database List -->
                 <div class="db-list-container">
                     <h3>Active Databases</h3>

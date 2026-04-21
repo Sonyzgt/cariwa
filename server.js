@@ -174,6 +174,34 @@ app.post('/api/upload', upload.single('dbFile'), (req, res) => {
     res.json({ success: true, dbName: dbName });
 });
 
+// API Endpoint to paste a new database
+app.post('/api/paste', (req, res) => {
+    const { name, content } = req.body;
+
+    if (!name || !content) {
+        return res.status(400).json({ error: 'Name and content are required' });
+    }
+
+    // Basic sanitization: remove path-related characters
+    const safeName = name.replace(/[/\\?%*:|"<>]/g, '').trim();
+    if (!safeName) {
+        return res.status(400).json({ error: 'Invalid database name' });
+    }
+
+    const dbName = safeName.endsWith('.txt') ? safeName.replace('.txt', '') : safeName;
+    const fileName = `${dbName}.txt`;
+    const filePath = path.join(__dirname, 'data', fileName);
+
+    try {
+        fs.writeFileSync(filePath, content, 'utf-8');
+        loadDatabaseFile(filePath, dbName);
+        res.json({ success: true, dbName: dbName });
+    } catch (error) {
+        console.error(`Failed to save pasted database ${dbName}:`, error);
+        res.status(500).json({ error: 'Failed to save database' });
+    }
+});
+
 // API Endpoint to delete a database file entirely
 app.post('/api/delete-db', (req, res) => {
     const { dbName } = req.body;
