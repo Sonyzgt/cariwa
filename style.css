@@ -758,6 +758,19 @@ header p {
     color: #000;
 }
 
+.btn-fetch-now {
+    background: linear-gradient(135deg, #10b981, #3b82f6);
+    color: white;
+    border: none;
+    box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
+}
+
+.btn-fetch-now:hover {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 15px 35px rgba(16, 185, 129, 0.5);
+    color: #fff;
+}
+
 /* ===== RESPONSIVE ===== */
 
 @media (max-width: 768px) {

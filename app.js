@@ -24,7 +24,7 @@ async function init() {
         if (availableDbs.length > 0) {
             currentDb = availableDbs[0];
             await fetchRegions(); // Load regions for this database
-            fetchNumbers();
+            updatePlaceholderUI(); // Show "Ready to fetch" instead of auto-fetching
         } else {
             singleNumberContainer.innerHTML = '<p class="error">Tidak ada database ditemukan.</p>';
         }
@@ -44,9 +44,37 @@ function setupModeSelector() {
             modeBtns.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             
-            fetchNumbers();
+            // Just update UI state, don't fetch automatically
+            updatePlaceholderUI();
         });
     });
+}
+
+function updatePlaceholderUI() {
+    singleNumberContainer.classList.add('hidden');
+    batchNumberContainer.classList.add('hidden');
+    
+    const placeholderHtml = `
+        <div class="big-number-card placeholder-card">
+            <div class="big-info">
+                <div class="big-number" style="font-size: 1.5rem; opacity: 0.5;">SIAP MENGAMBIL ${currentMode} NOMOR</div>
+            </div>
+            <div class="card-big-actions">
+                <button class="big-action-btn btn-fetch-now" onclick="fetchNumbers()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    AMBIL NOMOR SEKARANG
+                </button>
+            </div>
+        </div>
+    `;
+    
+    if (currentMode === 1) {
+        singleNumberContainer.innerHTML = placeholderHtml;
+        singleNumberContainer.classList.remove('hidden');
+    } else {
+        batchNumberContainer.innerHTML = placeholderHtml;
+        batchNumberContainer.classList.remove('hidden');
+    }
 }
 
 async function fetchRegions() {
