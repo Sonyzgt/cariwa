@@ -225,39 +225,73 @@ app.post('/api/delete-db', (req, res) => {
     }
 });
 
-// API endpoint to get a random number from a database
-app.get('/api/random', (req, res) => {
+// API endpoint to get a batch of random numbers from a database
+app.get('/api/batch', (req, res) => {
     const dbName = req.query.db;
     const regionCode = req.query.region;
+    const count = parseInt(req.query.count) || 5;
 
     if (!dbName || !databases.has(dbName)) {
         return res.status(404).json({ error: 'Database not found' });
     }
 
     const regionalGroups = databases.get(dbName);
-    let targetNumbers = [];
-
+    const selected = [];
+    
+    // Pick numbers
     if (regionCode && regionalGroups.has(regionCode)) {
-        targetNumbers = regionalGroups.get(regionCode);
+        const numbers = regionalGroups.get(regionCode);
+        const actualCount = Math.min(count, numbers.length);
+        for (let i = 0; i < actualCount; i++) {
+            const idx = Math.floor(Math.random() * numbers.length);
+            selected.push(numbers.splice(idx, 1)[0]);
+        }
+        if (numbers.length === 0) regionalGroups.delete(regionCode);
     } else {
-        // Fallback to all numbers if no region specified or not found
-        for (const numbers of regionalGroups.values()) {
-            targetNumbers = targetNumbers.concat(numbers);
+        // Across all regions
+        let allAvailable = [];
+        for (const [rCode, nums] of regionalGroups.entries()) {
+            nums.forEach(n => allAvailable.push({ n, rCode }));
+        }
+
+        const actualCount = Math.min(count, allAvailable.length);
+        for (let i = 0; i < actualCount; i++) {
+            const idx = Math.floor(Math.random() * allAvailable.length);
+            const { n, rCode } = allAvailable.splice(idx, 1)[0];
+            selected.push(n);
+            
+            // Remove from memory
+            const rNums = regionalGroups.get(rCode);
+            const nIdx = rNums.indexOf(n);
+            if (nIdx !== -1) {
+                rNums.splice(nIdx, 1);
+                if (rNums.length === 0) regionalGroups.delete(rCode);
+            }
         }
     }
 
-    if (targetNumbers.length === 0) {
+    if (selected.length === 0) {
         return res.json({ success: false, error: 'No numbers available' });
     }
 
-    const randomIndex = Math.floor(Math.random() * targetNumbers.length);
-    const randomNumber = targetNumbers[randomIndex];
-
-    res.json({
-        success: true,
-        data: getPhoneDetails(randomNumber),
-        remaining: targetNumbers.length
-    });
+    // Save to file
+    const filePath = path.join(__dirname, 'data', `${dbName}.txt`);
+    try {
+        const allNumbers = [];
+        for (const group of regionalGroups.values()) {
+            allNumbers.push(...group);
+        }
+        fs.writeFileSync(filePath, allNumbers.join('\n'), 'utf-8');
+        
+        res.json({
+            success: true,
+            data: selected.map(n => getPhoneDetails(n)),
+            remaining: allNumbers.length
+        });
+    } catch (error) {
+        console.error(`Failed to save database file ${dbName} after batch retrieval:`, error);
+        res.status(500).json({ error: 'Failed to update database file' });
+    }
 });
 
 // API endpoint to delete a number from a database

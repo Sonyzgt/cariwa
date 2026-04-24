@@ -1,18 +1,22 @@
 // Elements
 const regionSelector = document.getElementById('regionSelector');
 const singleNumberContainer = document.getElementById('singleNumberContainer');
+const batchNumberContainer = document.getElementById('batchNumberContainer');
 const loadingState = document.getElementById('loadingState');
-const statsDisplay = document.querySelector('.stats'); // Added in placeholder if needed, let's keep it for db info
+const loadingText = document.getElementById('loadingText');
+const modeBtns = document.querySelectorAll('.mode-btn');
 
 // State
 let currentDb = '';
 let currentRegion = ''; // Selected region code
 let availableDbs = [];
 let availableRegions = [];
-let currentNumberData = null;
+let currentNumberData = null; // Can be single object or array
+let currentMode = 1; // 1, 5, or 25
 
 // Initialize
 async function init() {
+    setupModeSelector();
     try {
         const response = await fetch('/api/databases');
         availableDbs = await response.json();
@@ -20,7 +24,7 @@ async function init() {
         if (availableDbs.length > 0) {
             currentDb = availableDbs[0];
             await fetchRegions(); // Load regions for this database
-            fetchRandomNumber();
+            fetchNumbers();
         } else {
             singleNumberContainer.innerHTML = '<p class="error">Tidak ada database ditemukan.</p>';
         }
@@ -28,6 +32,21 @@ async function init() {
         console.error('Failed to init:', error);
         singleNumberContainer.innerHTML = '<p class="error">Gagal memuat database.</p>';
     }
+}
+
+function setupModeSelector() {
+    modeBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const mode = parseInt(btn.getAttribute('data-mode'));
+            if (currentMode === mode) return;
+
+            currentMode = mode;
+            modeBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            fetchNumbers();
+        });
+    });
 }
 
 async function fetchRegions() {
@@ -68,7 +87,7 @@ function renderRegions() {
         document.querySelectorAll('.region-pill').forEach(p => p.classList.remove('active'));
         allBtn.classList.add('active');
         allBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-        fetchRandomNumber();
+        fetchNumbers();
     };
     regionSelector.appendChild(allBtn);
 
@@ -87,13 +106,12 @@ function renderRegions() {
             document.querySelectorAll('.region-pill').forEach(p => p.classList.remove('active'));
             btn.classList.add('active');
             btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-            fetchRandomNumber();
+            fetchNumbers();
         };
         
         regionSelector.appendChild(btn);
     });
     
-    // If no current region is set, default to "Semua" ('')
     if (currentRegion === undefined) {
         currentRegion = '';
         allBtn.classList.add('active');
@@ -101,17 +119,18 @@ function renderRegions() {
         const firstPill = regionSelector.querySelector('.region-pill');
         if (firstPill) {
             firstPill.classList.add('active');
-            setTimeout(() => firstPill.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' }), 100);
         }
     }
 }
 
-async function fetchRandomNumber() {
+async function fetchNumbers() {
     singleNumberContainer.classList.add('hidden');
+    batchNumberContainer.classList.add('hidden');
     loadingState.classList.remove('hidden');
+    loadingText.innerText = currentMode === 1 ? 'Mencari nomor...' : `Mencari ${currentMode} nomor...`;
     
     try {
-        let url = `/api/random?db=${encodeURIComponent(currentDb)}`;
+        let url = `/api/batch?db=${encodeURIComponent(currentDb)}&count=${currentMode}`;
         if (currentRegion) {
             url += `&region=${encodeURIComponent(currentRegion)}`;
         }
@@ -121,10 +140,20 @@ async function fetchRandomNumber() {
         
         if (result.success) {
             currentNumberData = result.data;
-            renderNumberCard(result.data, result.remaining);
+            if (currentMode === 1) {
+                renderNumberCard(result.data[0], result.remaining);
+            } else {
+                renderBatchCard(result.data, result.remaining);
+            }
         } else {
-            singleNumberContainer.innerHTML = `<div class="error-msg">${result.error || 'Gagal mengambil nomor.'}</div>`;
-            singleNumberContainer.classList.remove('hidden');
+            const errHtml = `<div class="error-msg">${result.error || 'Gagal mengambil nomor.'}</div>`;
+            if (currentMode === 1) {
+                singleNumberContainer.innerHTML = errHtml;
+                singleNumberContainer.classList.remove('hidden');
+            } else {
+                batchNumberContainer.innerHTML = errHtml;
+                batchNumberContainer.classList.remove('hidden');
+            }
         }
     } catch (err) {
         console.error(err);
@@ -147,11 +176,7 @@ function renderNumberCard(data, remaining) {
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                     COPY NUMBER
                 </button>
-                <button class="big-action-btn btn-telegram" onclick="sendToTelegram('${data.original}')">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L2 10.5L9 13L12 21L22 2Z" fill="white" /><path d="M9 13L22 2L12 21" stroke="white" stroke-width="2" /></svg>
-                    SEND TO TELEGRAM
-                </button>
-                <button class="big-action-btn btn-change" onclick="changeNumber(this)">
+                <button class="big-action-btn btn-change" onclick="fetchNumbers()">
                     CHANGE NUMBER
                 </button>
             </div>
@@ -160,40 +185,39 @@ function renderNumberCard(data, remaining) {
     singleNumberContainer.classList.remove('hidden');
 }
 
-async function changeNumber(btn) {
-    if (!currentNumberData || btn.disabled) return;
-    
-    btn.disabled = true;
-    const originalHTML = btn.innerHTML;
-    btn.innerHTML = `<span class="spinner-small"></span> Deleting...`;
-    
-    try {
-        const res = await fetch('/api/delete', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                db: currentDb,
-                number: currentNumberData.original
-            })
-        });
-        
-        const result = await res.json();
-        if (result.success) {
-            // Successfully deleted, now get a new one
-            fetchRandomNumber();
-        } else {
-            alert('Gagal menghapus nomor: ' + (result.error || 'Unknown error'));
-            btn.disabled = false;
-            btn.innerHTML = originalHTML;
-        }
-    } catch (err) {
-        console.error(err);
-        alert('Gagal menghubungi server.');
-        btn.disabled = false;
-        btn.innerHTML = originalHTML;
-    }
-}
+function renderBatchCard(data, remaining) {
+    let itemsHtml = '';
+    data.forEach(num => {
+        itemsHtml += `
+            <div class="batch-item">
+                <span class="batch-number">${num.original}</span>
+                <span class="batch-region" title="${num.countryName}">${num.flag}</span>
+            </div>
+        `;
+    });
 
+    batchNumberContainer.innerHTML = `
+        <div class="batch-card">
+            <div class="batch-header">
+                <span class="batch-title">${data.length} NOMOR DITEMUKAN</span>
+                <span class="remaining-count" style="font-size:0.9rem; color:var(--text-muted); font-weight:600;">SISA: ${remaining}</span>
+            </div>
+            <div class="batch-list">
+                ${itemsHtml}
+            </div>
+            <div class="batch-actions">
+                <button class="btn-copy-all" onclick="copyBatchToClipboard(this)">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    COPY SEMUA NOMOR
+                </button>
+                <button class="big-action-btn btn-change" style="margin-top: 1rem; width:100%;" onclick="fetchNumbers()">
+                    REFRESH BATCH
+                </button>
+            </div>
+        </div>
+    `;
+    batchNumberContainer.classList.remove('hidden');
+}
 
 async function copyToClipboard(text, btn) {
     const prefixedText = text.startsWith('+') ? text : '+' + text;
@@ -211,16 +235,31 @@ async function copyToClipboard(text, btn) {
     }
 }
 
-async function sendToTelegram(number) {
-    const prefixedText = number.startsWith('+') ? number : '+' + number;
-    const url = `https://t.me/Bulk_SmsBot?text=${encodeURIComponent(prefixedText)}`;
-    window.open(url, '_blank');
+async function copyBatchToClipboard(btn) {
+    if (!currentNumberData || !Array.isArray(currentNumberData)) return;
+    
+    const textToCopy = currentNumberData.map(num => {
+        return num.original.startsWith('+') ? num.original : '+' + num.original;
+    }).join('\n');
+
+    try {
+        await navigator.clipboard.writeText(textToCopy);
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> SEMUA DISALIN!`;
+        btn.classList.add('success');
+        setTimeout(() => {
+            btn.innerHTML = originalHTML;
+            btn.classList.remove('success');
+        }, 2000);
+    } catch (err) {
+        console.error('Failed to copy batch!', err);
+    }
 }
 
-// Global exposure for onclick handlers
-window.changeNumber = changeNumber;
+// Global exposure
+window.fetchNumbers = fetchNumbers;
 window.copyToClipboard = copyToClipboard;
-window.sendToTelegram = sendToTelegram;
+window.copyBatchToClipboard = copyBatchToClipboard;
 
 // Start
 init();
