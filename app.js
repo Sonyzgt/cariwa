@@ -217,7 +217,7 @@ function renderBatchCard(data, remaining) {
     let itemsHtml = '';
     data.forEach(num => {
         itemsHtml += `
-            <div class="batch-item">
+            <div class="batch-item batch-item-copyable" onclick="copyBatchItem('${num.original}', this)" title="Klik untuk salin nomor ini">
                 <span class="batch-number">${num.original}</span>
                 <span class="batch-region" title="${num.countryName}">${num.flag}</span>
             </div>
@@ -284,10 +284,30 @@ async function copyBatchToClipboard(btn) {
     }
 }
 
+async function copyBatchItem(text, element) {
+    const prefixedText = text.startsWith('+') ? text : '+' + text;
+    try {
+        await navigator.clipboard.writeText(prefixedText);
+        const originalHTML = element.innerHTML;
+        element.classList.add('batch-item-copied');
+        element.innerHTML = `
+            <span class="batch-number" style="color: var(--green);">✓ ${text}</span>
+            <span style="font-size:0.75rem; color: var(--green); font-weight:700;">DISALIN!</span>
+        `;
+        setTimeout(() => {
+            element.innerHTML = originalHTML;
+            element.classList.remove('batch-item-copied');
+        }, 1500);
+    } catch (err) {
+        console.error('Failed to copy item!', err);
+    }
+}
+
 // Global exposure
 window.fetchNumbers = fetchNumbers;
 window.copyToClipboard = copyToClipboard;
 window.copyBatchToClipboard = copyBatchToClipboard;
+window.copyBatchItem = copyBatchItem;
 
 // Start
 init();

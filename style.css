@@ -715,7 +715,24 @@ header p {
     transition: all 0.2s ease;
 }
 
-.batch-item:hover {
+.batch-item-copyable {
+    cursor: pointer;
+    user-select: none;
+}
+
+.batch-item-copyable:hover {
+    background: rgba(59, 130, 246, 0.08);
+    border-color: rgba(59, 130, 246, 0.3);
+    transform: translateX(5px);
+}
+
+.batch-item-copied {
+    background: rgba(16, 185, 129, 0.12) !important;
+    border-color: rgba(16, 185, 129, 0.5) !important;
+    transform: translateX(5px) !important;
+}
+
+.batch-item:not(.batch-item-copyable):hover {
     background: rgba(255, 255, 255, 0.06);
     transform: translateX(5px);
 }
